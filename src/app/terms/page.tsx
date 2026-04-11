@@ -53,11 +53,12 @@ export default function TermsPage() {
             <p>
               For questions about these Terms of Service, please contact us at{" "}
               <a
-                href="mailto:hello@purlyremote.com"
+                href="mailto:info@purlyremote.net"
                 className="text-brand-blue hover:underline"
               >
-                hello@purlyremote.com
+                info@purlyremote.net
               </a>
+              {" "}or call us at (319) 981-2656.
               .
             </p>
           </div>

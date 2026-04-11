@@ -63,7 +63,7 @@ export default function ContactSection() {
 
             <div className="space-y-4 mb-10">
               <a
-                href="mailto:purlyremotellc@gmail.com"
+                href="mailto:info@purlyremote.net"
                 className="flex items-center gap-4 p-4 bg-neutral-bg rounded-xl hover:bg-brand-blue-light transition-colors group"
               >
                 <div className="w-10 h-10 bg-brand-blue-light rounded-lg flex items-center justify-center group-hover:bg-brand-blue transition-colors">
@@ -74,7 +74,7 @@ export default function ContactSection() {
                     Email Us
                   </p>
                   <p className="text-sm font-medium text-neutral-text">
-                    purlyremotellc@gmail.com
+                    info@purlyremote.net
                   </p>
                 </div>
               </a>
@@ -84,10 +84,27 @@ export default function ContactSection() {
                 </div>
                 <div>
                   <p className="text-xs text-neutral-muted font-semibold uppercase tracking-wide">
-                    Response Time
+                    Phone
                   </p>
                   <p className="text-sm font-medium text-neutral-text">
-                    Within 24 business hours
+                    (319) 981-2656
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-start gap-4 p-4 bg-neutral-bg rounded-xl">
+                <div className="w-10 h-10 bg-brand-blue-light rounded-lg flex items-center justify-center flex-shrink-0">
+                  <svg className="w-4 h-4 text-brand-blue" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <p className="text-xs text-neutral-muted font-semibold uppercase tracking-wide">
+                    Address
+                  </p>
+                  <p className="text-sm font-medium text-neutral-text">
+                    104 Brookeridge Drive Suite #192<br />
+                    Waterloo, Iowa 50702-5702
                   </p>
                 </div>
               </div>

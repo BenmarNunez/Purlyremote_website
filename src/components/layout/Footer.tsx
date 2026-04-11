@@ -48,13 +48,22 @@ export default function Footer() {
               Connecting skilled freelancers with international clients —
               enabling fully remote, work-from-home opportunities worldwide.
             </p>
-            <a
-              href="mailto:hello@purlyremote.com"
-              className="flex items-center gap-2 text-white/70 hover:text-brand-blue transition-colors text-sm"
-            >
-              <Mail className="w-4 h-4" />
-              hello@purlyremote.com
-            </a>
+            <div className="space-y-2 mb-6">
+              <a
+                href="mailto:info@purlyremote.net"
+                className="flex items-center gap-2 text-white/70 hover:text-brand-blue transition-colors text-sm"
+              >
+                <Mail className="w-4 h-4" />
+                info@purlyremote.net
+              </a>
+              <p className="text-white/70 text-sm">
+                (319) 981-2656
+              </p>
+              <p className="text-white/70 text-sm">
+                104 Brookeridge Drive Suite #192<br />
+                Waterloo, Iowa 50702-5702
+              </p>
+            </div>
             {/* Social */}
             <div className="flex items-center gap-3 mt-5">
               {[
