@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import { useState } from 'react'
 import { useForm } from 'react-hook-form'
@@ -56,6 +56,7 @@ export default function RegisterPage() {
       if (json.requiresEmailConfirmation) {
         router.push('/auth/check-email')
       } else {
+        // Auto sign-in client — adminClient.createUser does not create a session
         const supabase = createClient()
         await supabase.auth.signInWithPassword({ email: data.email, password: data.password })
         router.push('/client/dashboard')
@@ -78,17 +79,18 @@ export default function RegisterPage() {
           <p className="text-neutral-muted mt-2 font-body">Join Purly Remote today</p>
         </div>
 
+        {/* Role toggle */}
         <div className="flex rounded-btn border border-neutral-border bg-white p-1 mb-6">
           {(['client', 'freelancer'] as const).map(role => (
             <button
               key={role}
               type="button"
               onClick={() => { setActiveRole(role); setServerError(null) }}
-              className={lex-1 py-2.5 text-sm font-semibold rounded-btn transition-all +${
+              className={`flex-1 py-2.5 text-sm font-semibold rounded-btn transition-all ${
                 activeRole === role
                   ? 'bg-brand-blue text-white shadow-btn'
                   : 'text-neutral-muted hover:text-neutral-text'
-              }}
+              }`}
             >
               {role === 'client' ? "I'm a Client" : "I'm a Freelancer"}
             </button>
@@ -96,6 +98,7 @@ export default function RegisterPage() {
         </div>
 
         <div className="card border border-neutral-border">
+          {/* Client form */}
           {activeRole === 'client' && (
             <form onSubmit={clientForm.handleSubmit(handleSubmit)} className="space-y-5">
               <input type="hidden" {...clientForm.register('role')} />
@@ -129,11 +132,14 @@ export default function RegisterPage() {
               </div>
               {serverError && <p className="text-sm text-danger bg-red-50 border border-red-200 rounded-input p-3">{serverError}</p>}
               <button type="submit" disabled={isClientSubmitting} className="btn-primary w-full py-3.5 disabled:opacity-60 disabled:cursor-not-allowed">
-                {isClientSubmitting ? (<><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Creating account...</>) : 'Create Client Account'}
+                {isClientSubmitting ? (
+                  <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Creating account...</>
+                ) : 'Create Client Account'}
               </button>
             </form>
           )}
 
+          {/* Freelancer form */}
           {activeRole === 'freelancer' && (
             <form onSubmit={freelancerForm.handleSubmit(handleSubmit)} className="space-y-5">
               <input type="hidden" {...freelancerForm.register('role')} />
@@ -171,7 +177,9 @@ export default function RegisterPage() {
               </div>
               {serverError && <p className="text-sm text-danger bg-red-50 border border-red-200 rounded-input p-3">{serverError}</p>}
               <button type="submit" disabled={isFreelancerSubmitting} className="btn-primary w-full py-3.5 disabled:opacity-60 disabled:cursor-not-allowed">
-                {isFreelancerSubmitting ? (<><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Creating account...</>) : 'Apply as Freelancer'}
+                {isFreelancerSubmitting ? (
+                  <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />Creating account...</>
+                ) : 'Apply as Freelancer'}
               </button>
             </form>
           )}
