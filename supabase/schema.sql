@@ -3,7 +3,6 @@
 -- ============================================================
 
 -- Extensions
-create extension if not exists "uuid-ossp";
 create extension if not exists moddatetime schema extensions;
 
 -- ============================================================
@@ -45,6 +44,8 @@ create table public.freelancer_profiles (
   created_at        timestamptz not null default now()
 );
 
+create index on public.freelancer_profiles (user_id);
+
 alter table public.freelancer_profiles enable row level security;
 
 -- Freelancer reads their own profile
@@ -63,12 +64,17 @@ create policy "freelancer_profiles: select approved for clients"
     )
   );
 
--- Freelancer updates their own profile
+-- Freelancer updates their own non-approval profile fields only.
+-- Approval fields (approved, approval_status, approval_notes) are protected
+-- by trg_protect_approval_fields — only service_role connections may change them.
+-- No insert policy — rows created via service role in register API route.
 create policy "freelancer_profiles: update own"
   on public.freelancer_profiles for update
-  using (auth.uid() = user_id);
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 
--- Trigger: keep approved boolean in sync with approval_status text
+-- Trigger: keep approved boolean in sync with approval_status text.
+-- Fires on insert and on update of approval_status.
 create or replace function sync_approved_from_status()
 returns trigger language plpgsql as $$
 begin
@@ -82,8 +88,32 @@ create trigger trg_sync_approved
   on public.freelancer_profiles
   for each row execute function sync_approved_from_status();
 
+-- Trigger: prevent authenticated users from modifying approval fields directly.
+-- Only service_role database connections (used by the admin API routes) may
+-- change approval_status, approved, or approval_notes.
+create or replace function protect_approval_fields()
+returns trigger language plpgsql as $$
+begin
+  if current_role = 'authenticated' then
+    if (
+      new.approval_status is distinct from old.approval_status or
+      new.approved       is distinct from old.approved or
+      new.approval_notes is distinct from old.approval_notes
+    ) then
+      raise exception 'approval fields can only be modified by an admin';
+    end if;
+  end if;
+  return new;
+end;
+$$;
+
+create trigger trg_protect_approval_fields
+  before update on public.freelancer_profiles
+  for each row execute function protect_approval_fields();
+
 -- ============================================================
 -- CLIENT PROFILES
+-- No insert policy — rows created via service role in register API route.
 -- ============================================================
 create table public.client_profiles (
   id           uuid primary key default gen_random_uuid(),
@@ -94,6 +124,8 @@ create table public.client_profiles (
   created_at   timestamptz not null default now()
 );
 
+create index on public.client_profiles (user_id);
+
 alter table public.client_profiles enable row level security;
 
 create policy "client_profiles: select own"
@@ -102,15 +134,16 @@ create policy "client_profiles: select own"
 
 create policy "client_profiles: update own"
   on public.client_profiles for update
-  using (auth.uid() = user_id);
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
 
 -- ============================================================
 -- HIRE REQUESTS
 -- ============================================================
 create table public.hire_requests (
   id            uuid primary key default gen_random_uuid(),
-  client_id     uuid not null references public.users(id),
-  freelancer_id uuid not null references public.users(id),
+  client_id     uuid not null references public.users(id) on delete restrict,
+  freelancer_id uuid not null references public.users(id) on delete restrict,
   service       text not null,
   description   text not null,
   status        text not null default 'pending'
@@ -118,6 +151,9 @@ create table public.hire_requests (
   created_at    timestamptz not null default now(),
   updated_at    timestamptz not null default now()
 );
+
+create index on public.hire_requests (client_id);
+create index on public.hire_requests (freelancer_id);
 
 alter table public.hire_requests enable row level security;
 
@@ -134,6 +170,8 @@ create policy "hire_requests: insert client"
     )
   );
 
+-- Both parties may update; column-level status transition enforcement
+-- is handled in application-layer API routes (Phase 2).
 create policy "hire_requests: update parties"
   on public.hire_requests for update
   using (auth.uid() = client_id or auth.uid() = freelancer_id);
@@ -148,13 +186,17 @@ create trigger trg_hire_requests_updated_at
 -- ============================================================
 create table public.messages (
   id          uuid primary key default gen_random_uuid(),
-  sender_id   uuid not null references public.users(id),
-  receiver_id uuid not null references public.users(id),
+  sender_id   uuid not null references public.users(id) on delete restrict,
+  receiver_id uuid not null references public.users(id) on delete restrict,
   request_id  uuid references public.hire_requests(id) on delete set null,
   content     text not null,
   read        boolean not null default false,
   created_at  timestamptz not null default now()
 );
+
+create index on public.messages (sender_id);
+create index on public.messages (receiver_id);
+create index on public.messages (request_id);
 
 alter table public.messages enable row level security;
 
@@ -166,9 +208,11 @@ create policy "messages: insert sender"
   on public.messages for insert
   with check (auth.uid() = sender_id);
 
+-- Receiver may only flip read=true. with check prevents content tampering.
 create policy "messages: update read (receiver only)"
   on public.messages for update
-  using (auth.uid() = receiver_id);
+  using (auth.uid() = receiver_id)
+  with check (auth.uid() = receiver_id and read = true);
 
 alter publication supabase_realtime add table public.messages;
 
@@ -186,15 +230,19 @@ create table public.notifications (
   created_at timestamptz not null default now()
 );
 
+create index on public.notifications (user_id);
+
 alter table public.notifications enable row level security;
 
 create policy "notifications: select own"
   on public.notifications for select
   using (auth.uid() = user_id);
 
+-- User may only flip read=true. with check prevents content tampering.
 create policy "notifications: update own (mark read)"
   on public.notifications for update
-  using (auth.uid() = user_id);
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id and read = true);
 
 -- No insert policy — inserts must use service role key
 
@@ -206,7 +254,7 @@ alter publication supabase_realtime add table public.notifications;
 -- ============================================================
 create table public.services_catalog (
   id          uuid primary key default gen_random_uuid(),
-  name        text not null,
+  name        text unique not null,
   icon        text,
   description text,
   active      boolean not null default true
@@ -226,13 +274,15 @@ create policy "services_catalog: select authenticated"
 -- ============================================================
 create table public.chatbot_sessions (
   id             uuid primary key default gen_random_uuid(),
-  session_token  text not null,
+  session_token  text unique not null,
   email          text,
   service_needed text,
   notes          text,
   notified       boolean not null default false,
   created_at     timestamptz not null default now()
 );
+
+create index on public.chatbot_sessions (session_token);
 
 alter table public.chatbot_sessions enable row level security;
 
