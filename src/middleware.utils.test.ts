@@ -37,4 +37,9 @@ describe('getRedirectPath', () => {
     expect(getRedirectPath(null, '/client/settings/billing')).toBe('/auth/login')
     expect(getRedirectPath(makeUser('client'), '/client/settings/billing')).toBeNull()
   })
+
+  it('treats user with missing role as unauthenticated (no /undefined/dashboard)', () => {
+    expect(getRedirectPath({ app_metadata: {} }, '/client/dashboard')).toBe('/auth/login')
+    expect(getRedirectPath({ app_metadata: {} }, '/auth/login')).toBeNull()
+  })
 })

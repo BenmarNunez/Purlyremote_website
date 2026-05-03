@@ -1,9 +1,11 @@
-type PartialUser = { app_metadata?: { role?: string } } | null
+// Index signature required for TypeScript compatibility with Supabase's UserAppMetadata type
+type PartialUser = { app_metadata?: { role?: string; [key: string]: unknown } } | null
 
 export function getRedirectPath(user: PartialUser, pathname: string): string | null {
   const role = user?.app_metadata?.role
 
-  if (!user) {
+  // Treat missing role same as unauthenticated — avoids /undefined/dashboard redirects
+  if (!user || !role) {
     return pathname.startsWith('/auth') ? null : '/auth/login'
   }
 
