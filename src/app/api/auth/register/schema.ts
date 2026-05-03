@@ -2,7 +2,7 @@ import { z } from 'zod'
 
 const clientBase = z.object({
   role: z.literal('client'),
-  full_name: z.string().min(2, 'Name must be at least 2 characters'),
+  full_name: z.string().trim().min(2, 'Name must be at least 2 characters'),
   company_name: z.string().optional(),
   email: z.string().email('Please enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
@@ -11,7 +11,7 @@ const clientBase = z.object({
 
 const freelancerBase = z.object({
   role: z.literal('freelancer'),
-  full_name: z.string().min(2, 'Name must be at least 2 characters'),
+  full_name: z.string().trim().min(2, 'Name must be at least 2 characters'),
   expertise_area: z.string().min(2, 'Please select your expertise'),
   email: z.string().email('Please enter a valid email'),
   password: z.string().min(8, 'Password must be at least 8 characters'),
