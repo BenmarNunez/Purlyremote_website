@@ -7,6 +7,7 @@ import HowItWorksSection from "@/components/sections/HowItWorksSection";
 import WhyChooseUsSection from "@/components/sections/WhyChooseUsSection";
 import TestimonialsSection from "@/components/sections/TestimonialsSection";
 import ContactSection from "@/components/sections/ContactSection";
+import ChatbotWidget from "@/components/ChatbotWidget";
 
 export default function HomePage() {
   return (
@@ -22,6 +23,7 @@ export default function HomePage() {
         <ContactSection />
       </main>
       <Footer />
+      <ChatbotWidget />
     </>
   );
 }
