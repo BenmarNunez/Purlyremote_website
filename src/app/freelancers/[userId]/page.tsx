@@ -121,6 +121,26 @@ export default async function PublicFreelancerProfile({ params }: PageProps) {
             </div>
           )}
 
+          {/* Portfolio gallery */}
+          {profile.portfolio_images && profile.portfolio_images.length > 0 && (
+            <div className="card p-6 mb-6">
+              <h2 className="font-heading font-semibold text-neutral-800 mb-4">Portfolio</h2>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {profile.portfolio_images.map((url) => (
+                  <a
+                    key={url}
+                    href={url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block rounded-lg overflow-hidden border border-neutral-200 aspect-square bg-neutral-50 hover:opacity-90 transition-opacity"
+                  >
+                    <img src={url} alt="" className="w-full h-full object-cover" loading="lazy" />
+                  </a>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* CTA */}
           <div className="card p-6 bg-[#007BFF] text-white text-center">
             <h2 className="font-heading font-bold text-xl mb-2">Ready to work with {profile.full_name.split(' ')[0]}?</h2>

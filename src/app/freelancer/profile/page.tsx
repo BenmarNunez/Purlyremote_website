@@ -211,6 +211,126 @@ function CompletionChecklist({
   )
 }
 
+// ─── Portfolio image gallery ──────────────────────────────────────────────────
+
+function PortfolioGallery({
+  userId,
+  images,
+  onChange,
+}: {
+  userId: string
+  images: string[]
+  onChange: (next: string[]) => void
+}) {
+  const [uploading, setUploading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  const MAX_IMAGES = 8
+  const MAX_BYTES = 3 * 1024 * 1024
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? [])
+    if (files.length === 0) return
+    e.target.value = ''
+
+    if (images.length + files.length > MAX_IMAGES) {
+      setError(`Maximum ${MAX_IMAGES} images. Remove some first.`)
+      return
+    }
+
+    setError(null)
+    setUploading(true)
+    const supabase = createClient()
+    const uploaded: string[] = []
+
+    for (const file of files) {
+      if (!file.type.startsWith('image/')) {
+        setError(`${file.name}: not an image`)
+        continue
+      }
+      if (file.size > MAX_BYTES) {
+        setError(`${file.name}: over 3MB`)
+        continue
+      }
+      const ext = file.name.split('.').pop() ?? 'jpg'
+      const safe = file.name.replace(/[^a-zA-Z0-9._-]/g, '_')
+      const path = `${userId}/${Date.now()}-${safe}.${ext}`
+      const { error: upErr } = await supabase.storage
+        .from('portfolios')
+        .upload(path, file, { upsert: false })
+      if (upErr) {
+        setError(`${file.name}: ${upErr.message}`)
+        continue
+      }
+      const { data } = supabase.storage.from('portfolios').getPublicUrl(path)
+      uploaded.push(data.publicUrl)
+    }
+
+    if (uploaded.length > 0) onChange([...images, ...uploaded])
+    setUploading(false)
+  }
+
+  async function handleDelete(url: string) {
+    if (!window.confirm('Remove this image?')) return
+    const supabase = createClient()
+    // Path = portion after the bucket URL prefix
+    const marker = '/portfolios/'
+    const idx = url.indexOf(marker)
+    if (idx !== -1) {
+      const path = url.slice(idx + marker.length)
+      await supabase.storage.from('portfolios').remove([path])
+    }
+    onChange(images.filter((i) => i !== url))
+  }
+
+  return (
+    <div>
+      <label className="form-label">Portfolio Images <span className="text-neutral-400 text-xs font-normal">(up to {MAX_IMAGES}, 3MB each)</span></label>
+
+      {images.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
+          {images.map((url) => (
+            <div key={url} className="relative group rounded-lg overflow-hidden border border-neutral-200 aspect-square bg-neutral-50">
+              <img src={url} alt="" className="w-full h-full object-cover" />
+              <button
+                type="button"
+                onClick={() => handleDelete(url)}
+                className="absolute top-1 right-1 w-7 h-7 rounded-full bg-black/60 text-white text-xs opacity-0 group-hover:opacity-100 transition-opacity"
+                aria-label="Remove image"
+              >
+                ✕
+              </button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {images.length < MAX_IMAGES && (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          disabled={uploading}
+          className="btn-outline text-sm px-4 py-2 disabled:opacity-60"
+        >
+          {uploading ? 'Uploading…' : '+ Add Images'}
+        </button>
+      )}
+
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        multiple
+        className="hidden"
+        onChange={handleUpload}
+      />
+
+      {error && <p className="form-error mt-2">{error}</p>}
+    </div>
+  )
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function FreelancerProfilePage() {
@@ -220,6 +340,7 @@ export default function FreelancerProfilePage() {
   const [selectedServices, setSelectedServices] = useState<string[]>([])
   const [skills, setSkills] = useState<string[]>([])
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [portfolioImages, setPortfolioImages] = useState<string[]>([])
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
   const [saveError, setSaveError] = useState<string | null>(null)
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'submitting' | 'submitted' | 'error'>('idle')
@@ -264,6 +385,7 @@ export default function FreelancerProfilePage() {
       setAvatarUrl(p.avatar_url)
       setSkills(p.skills ?? [])
       setSelectedServices(p.services ?? [])
+      setPortfolioImages(p.portfolio_images ?? [])
       reset({
         full_name: p.full_name ?? '',
         bio: p.bio ?? '',
@@ -293,6 +415,7 @@ export default function FreelancerProfilePage() {
           bio: values.bio,
           hourly_rate: values.hourly_rate ? Number(values.hourly_rate) : null,
           portfolio_url: values.portfolio_url || null,
+          portfolio_images: portfolioImages,
           availability: values.availability,
           skills,
           services: selectedServices,
@@ -464,6 +587,15 @@ export default function FreelancerProfilePage() {
             {...register('portfolio_url')}
           />
         </div>
+
+        {/* Portfolio Images */}
+        {userId && (
+          <PortfolioGallery
+            userId={userId}
+            images={portfolioImages}
+            onChange={setPortfolioImages}
+          />
+        )}
 
         {/* Availability toggle */}
         <div className="flex items-center gap-3">

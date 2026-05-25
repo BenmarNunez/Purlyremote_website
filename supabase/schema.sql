@@ -35,6 +35,7 @@ create table public.freelancer_profiles (
   hourly_rate       numeric,
   availability      boolean not null default true,
   portfolio_url     text,
+  portfolio_images  text[] not null default '{}',
   avatar_url        text,
   approved          boolean not null default false,
   approval_status   text not null default 'pending'
@@ -43,6 +44,9 @@ create table public.freelancer_profiles (
   profile_completed boolean not null default false,
   created_at        timestamptz not null default now()
 );
+
+alter table public.freelancer_profiles
+  add column if not exists portfolio_images text[] not null default '{}';
 
 create index on public.freelancer_profiles (user_id);
 
@@ -375,6 +379,32 @@ create policy "resumes: freelancer read own"
     bucket_id = 'resumes'
     and (storage.foldername(name))[1] = 'freelancers'
     and auth.uid()::text = (storage.foldername(name))[2]
+  );
+
+-- ============================================================
+-- SUPABASE STORAGE — portfolios bucket (public images)
+-- Path: portfolios/<auth.uid>/<file>
+-- ============================================================
+insert into storage.buckets (id, name, public)
+  values ('portfolios', 'portfolios', true)
+  on conflict (id) do nothing;
+
+create policy "portfolios: freelancer upload own"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'portfolios'
+    and auth.uid()::text = (storage.foldername(name))[1]
+  );
+
+create policy "portfolios: public read"
+  on storage.objects for select
+  using (bucket_id = 'portfolios');
+
+create policy "portfolios: freelancer delete own"
+  on storage.objects for delete
+  using (
+    bucket_id = 'portfolios'
+    and auth.uid()::text = (storage.foldername(name))[1]
   );
 
 -- ============================================================

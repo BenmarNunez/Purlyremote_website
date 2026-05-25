@@ -8,6 +8,7 @@ interface PatchBody {
   services?: string[]
   hourly_rate?: number | null
   portfolio_url?: string | null
+  portfolio_images?: string[]
   availability?: boolean
 }
 
@@ -62,6 +63,12 @@ export async function PATCH(req: NextRequest) {
   }
   if ('portfolio_url' in raw && (typeof raw.portfolio_url === 'string' || raw.portfolio_url === null)) {
     update.portfolio_url = raw.portfolio_url
+  }
+  if ('portfolio_images' in raw && Array.isArray(raw.portfolio_images) && raw.portfolio_images.every((s) => typeof s === 'string')) {
+    if (raw.portfolio_images.length > 8) {
+      return NextResponse.json({ error: 'Maximum 8 portfolio images' }, { status: 400 })
+    }
+    update.portfolio_images = raw.portfolio_images as string[]
   }
   if ('availability' in raw && typeof raw.availability === 'boolean') {
     update.availability = raw.availability

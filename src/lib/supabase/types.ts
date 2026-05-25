@@ -12,6 +12,7 @@ export interface FreelancerProfile {
   hourly_rate: number | null
   availability: boolean
   portfolio_url: string | null
+  portfolio_images: string[]
   avatar_url: string | null
   approved: boolean
   approval_status: ApprovalStatus
