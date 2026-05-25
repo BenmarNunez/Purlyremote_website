@@ -73,10 +73,12 @@ create index if not exists reports_target_idx       on public.reports (target_ty
 
 alter table public.reports enable row level security;
 
+drop policy if exists "reports: insert own" on public.reports;
 create policy "reports: insert own"
   on public.reports for insert
   with check (auth.uid() = reporter_id);
 
+drop policy if exists "reports: select own" on public.reports;
 create policy "reports: select own"
   on public.reports for select
   using (auth.uid() = reporter_id);
@@ -127,6 +129,7 @@ create index if not exists user_sessions_last_seen_idx   on public.user_sessions
 
 alter table public.user_sessions enable row level security;
 
+drop policy if exists "user_sessions: select own" on public.user_sessions;
 create policy "user_sessions: select own"
   on public.user_sessions for select
   using (auth.uid() = user_id);
@@ -148,6 +151,7 @@ create index if not exists subscriptions_status_idx      on public.subscriptions
 
 alter table public.subscriptions enable row level security;
 
+drop policy if exists "subscriptions: select own" on public.subscriptions;
 create policy "subscriptions: select own"
   on public.subscriptions for select
   using (auth.uid() = user_id);
@@ -168,6 +172,7 @@ create index if not exists activity_logs_created_at_idx on public.activity_logs 
 
 alter table public.activity_logs enable row level security;
 
+drop policy if exists "activity_logs: select own" on public.activity_logs;
 create policy "activity_logs: select own"
   on public.activity_logs for select
   using (auth.uid() = user_id);
