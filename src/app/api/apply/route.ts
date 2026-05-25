@@ -1,85 +1,82 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from 'next/server'
+import { adminClient } from '@/lib/supabase/admin'
+import { Resend } from 'resend'
+
+const resend = new Resend(process.env.RESEND_API_KEY)
+const FROM = process.env.CONTACT_FROM_EMAIL ?? 'noreply@purlyremote.com'
+const ADMIN_EMAIL = process.env.CONTACT_TO_EMAIL ?? ''
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
 
 export async function POST(req: NextRequest) {
+  let body: unknown
   try {
-    const body = await req.json();
-    const {
-      full_name,
-      email,
-      expertise_area,
-      years_experience,
-      portfolio_link,
-      preferred_role,
-      availability_status,
-      additional_notes,
-    } = body;
-
-    if (!full_name || !email || !expertise_area || !years_experience) {
-      return NextResponse.json(
-        { error: "Missing required fields" },
-        { status: 400 }
-      );
-    }
-
-    // --- Email via Resend ---
-    // Uncomment and configure once RESEND_API_KEY is set in .env.local
-    //
-    // const { Resend } = await import("resend");
-    // const resend = new Resend(process.env.RESEND_API_KEY);
-    // await resend.emails.send({
-    //   from: process.env.CONTACT_FROM_EMAIL!,
-    //   to: process.env.CONTACT_TO_EMAIL!,
-    //   subject: `New Freelancer Application from ${full_name}`,
-    //   html: `
-    //     <h2>New Freelancer Application</h2>
-    //     <p><strong>Name:</strong> ${full_name}</p>
-    //     <p><strong>Email:</strong> ${email}</p>
-    //     <p><strong>Expertise:</strong> ${expertise_area}</p>
-    //     <p><strong>Years of Experience:</strong> ${years_experience}</p>
-    //     <p><strong>Preferred Role:</strong> ${preferred_role || "N/A"}</p>
-    //     <p><strong>Portfolio:</strong> ${portfolio_link || "N/A"}</p>
-    //     <p><strong>Availability:</strong> ${availability_status}</p>
-    //     <p><strong>Notes:</strong> ${additional_notes || "N/A"}</p>
-    //   `,
-    // });
-
-    // --- Airtable Integration (Future) ---
-    // if (process.env.AIRTABLE_API_KEY && process.env.AIRTABLE_BASE_ID) {
-    //   await fetch(`https://api.airtable.com/v0/${process.env.AIRTABLE_BASE_ID}/FreelancerApplications`, {
-    //     method: "POST",
-    //     headers: {
-    //       Authorization: `Bearer ${process.env.AIRTABLE_API_KEY}`,
-    //       "Content-Type": "application/json",
-    //     },
-    //     body: JSON.stringify({
-    //       fields: {
-    //         "Full Name": full_name,
-    //         "Email": email,
-    //         "Expertise Area": expertise_area,
-    //         "Years Experience": years_experience,
-    //         "Portfolio Link": portfolio_link,
-    //         "Preferred Role": preferred_role,
-    //         "Availability": availability_status,
-    //         "Notes": additional_notes,
-    //         "Status": "Pending Review",
-    //       },
-    //     }),
-    //   });
-    // }
-
-    console.log("Freelancer application received:", {
-      full_name,
-      email,
-      expertise_area,
-      availability_status,
-    });
-
-    return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Apply form error:", error);
-    return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
-    );
+    body = await req.json()
+  } catch {
+    return NextResponse.json({ error: 'Invalid JSON body.' }, { status: 400 })
   }
+
+  const {
+    full_name,
+    email,
+    phone_number,
+    expertise_area,
+    years_experience,
+    portfolio_link,
+    preferred_role,
+    availability_status,
+    additional_notes,
+    resume_url,
+  } = body as Record<string, string | undefined>
+
+  if (!full_name || !email || !expertise_area || !years_experience) {
+    return NextResponse.json({ error: 'Missing required fields.' }, { status: 400 })
+  }
+
+  const { error: dbError } = await adminClient.from('freelancer_applications').insert({
+    full_name,
+    email,
+    phone_number: phone_number || null,
+    expertise_area,
+    years_experience,
+    preferred_role: preferred_role || null,
+    portfolio_url: portfolio_link || null,
+    availability_status: availability_status || 'Flexible',
+    additional_notes: additional_notes || null,
+    resume_url: resume_url || null,
+    status: 'pending',
+  })
+
+  if (dbError) {
+    console.error('Failed to save application:', dbError.message)
+    return NextResponse.json({ error: 'Failed to submit application. Please try again.' }, { status: 500 })
+  }
+
+  if (ADMIN_EMAIL) {
+    resend.emails.send({
+      from: FROM,
+      to: ADMIN_EMAIL,
+      subject: `New Freelancer Application — ${full_name}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:32px">
+          <h2 style="color:#007BFF">New Freelancer Application</h2>
+          <table style="width:100%;border-collapse:collapse;margin-top:16px">
+            <tr><td style="padding:8px;color:#666;width:160px">Name</td><td style="padding:8px;font-weight:600">${full_name}</td></tr>
+            <tr style="background:#f9f9f9"><td style="padding:8px;color:#666">Email</td><td style="padding:8px">${email}</td></tr>
+            <tr><td style="padding:8px;color:#666">Expertise</td><td style="padding:8px">${expertise_area}</td></tr>
+            <tr style="background:#f9f9f9"><td style="padding:8px;color:#666">Experience</td><td style="padding:8px">${years_experience}</td></tr>
+            <tr><td style="padding:8px;color:#666">Preferred Role</td><td style="padding:8px">${preferred_role || 'N/A'}</td></tr>
+            <tr style="background:#f9f9f9"><td style="padding:8px;color:#666">Portfolio</td><td style="padding:8px">${portfolio_link || 'N/A'}</td></tr>
+            <tr><td style="padding:8px;color:#666">Availability</td><td style="padding:8px">${availability_status || 'Flexible'}</td></tr>
+            <tr style="background:#f9f9f9"><td style="padding:8px;color:#666">Notes</td><td style="padding:8px">${additional_notes || 'N/A'}</td></tr>
+          </table>
+          <a href="${SITE_URL}/admin/applications"
+             style="display:inline-block;background:#007BFF;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:24px">
+            Review in Admin Panel
+          </a>
+        </div>
+      `,
+    }).catch((err: unknown) => console.error('Admin notification email failed:', err))
+  }
+
+  return NextResponse.json({ success: true })
 }

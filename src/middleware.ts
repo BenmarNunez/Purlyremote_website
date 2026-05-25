@@ -2,7 +2,31 @@ import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 import { getRedirectPath } from './middleware.utils'
 
+import { Ratelimit } from '@upstash/ratelimit'
+import { Redis } from '@upstash/redis'
+
+const hasUpstash = !!(process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN)
+
+const ratelimit = hasUpstash
+  ? new Ratelimit({
+      redis: Redis.fromEnv(),
+      limiter: Ratelimit.slidingWindow(60, '1m'),
+      analytics: true,
+    })
+  : null
+
 export async function middleware(request: NextRequest) {
+  // Rate limit all matched routes — 60 requests/min per IP (if Upstash configured)
+  if (ratelimit) {
+    const ip = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
+      ?? request.headers.get('x-real-ip')
+      ?? 'anonymous'
+    const { success } = await ratelimit.limit(ip)
+    if (!success) {
+      return new NextResponse('Too many requests', { status: 429 })
+    }
+  }
+
   let supabaseResponse = NextResponse.next({ request })
 
   // Capture full cookie options so they can be forwarded to redirect responses.
@@ -35,6 +59,15 @@ export async function middleware(request: NextRequest) {
   // Never use getSession() here — it trusts the client-side cookie without validation.
   const { data: { user } } = await supabase.auth.getUser()
 
+  // API routes handle their own auth — skip redirect logic, only apply rate limiting
+  // Stripe webhook must never be rate-limited (Stripe retries will fail)
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    if (request.nextUrl.pathname === '/api/stripe/webhook') {
+      return supabaseResponse
+    }
+    return supabaseResponse
+  }
+
   const redirectPath = getRedirectPath(user, request.nextUrl.pathname)
 
   if (redirectPath) {
@@ -52,5 +85,11 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ['/client/:path*', '/freelancer/:path*', '/admin/:path*', '/auth/:path*'],
+  matcher: [
+    '/client/:path*',
+    '/freelancer/:path*',
+    '/admin/:path*',
+    '/auth/:path*',
+    '/api/:path*',
+  ],
 }

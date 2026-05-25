@@ -101,6 +101,31 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     )
   }
 
+  // Guard: max conversation length (cost + abuse control)
+  if (messages.length > 20) {
+    return NextResponse.json(
+      { error: 'Conversation limit reached. Please start a new session.' },
+      { status: 400 }
+    )
+  }
+
+  // Guard: max content length per message
+  if (messages.some((m) => m.content.length > 2000)) {
+    return NextResponse.json(
+      { error: 'Message too long. Max 2000 characters.' },
+      { status: 400 }
+    )
+  }
+
+  // Guard: API key must be configured
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.error('ANTHROPIC_API_KEY is not set')
+    return NextResponse.json({ error: 'Service temporarily unavailable' }, { status: 503 })
+  }
+
+  // Trim to last 10 messages to control token cost
+  const trimmedMessages = messages.slice(-10)
+
   // Call Anthropic
   let responseText: string
   try {
@@ -110,7 +135,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       model: 'claude-sonnet-4-20250514',
       max_tokens: 500,
       system: SYSTEM_PROMPT,
-      messages: messages,
+      messages: trimmedMessages,
     })
 
     responseText =

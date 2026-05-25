@@ -11,7 +11,12 @@ interface PatchBody {
   status: HireRequestStatus
 }
 
-const ALLOWED_STATUSES: HireRequestStatus[] = ['accepted', 'declined', 'completed']
+const VALID_TRANSITIONS: Record<string, HireRequestStatus[]> = {
+  pending: ['accepted', 'declined'],
+  accepted: ['completed'],
+  declined: [],
+  completed: [],
+}
 
 export async function PATCH(
   request: NextRequest,
@@ -40,17 +45,10 @@ export async function PATCH(
 
   const { status } = body
 
-  if (!ALLOWED_STATUSES.includes(status)) {
-    return NextResponse.json(
-      { error: `status must be one of: ${ALLOWED_STATUSES.join(', ')}` },
-      { status: 400 }
-    )
-  }
-
-  // Fetch the hire request first to get client_id and verify ownership
+  // Fetch hire request — verify ownership and get current status
   const { data: existing, error: fetchError } = await supabase
     .from('hire_requests')
-    .select('id, client_id, freelancer_id, service')
+    .select('id, client_id, freelancer_id, service, status')
     .eq('id', id)
     .eq('freelancer_id', user.id)
     .single()
@@ -59,7 +57,16 @@ export async function PATCH(
     return NextResponse.json({ error: 'Hire request not found' }, { status: 404 })
   }
 
-  const hireRequest = existing as Pick<HireRequest, 'id' | 'client_id' | 'freelancer_id' | 'service'>
+  const hireRequest = existing as Pick<HireRequest, 'id' | 'client_id' | 'freelancer_id' | 'service'> & { status: string }
+
+  // Enforce state machine
+  const allowed = VALID_TRANSITIONS[hireRequest.status] ?? []
+  if (!allowed.includes(status)) {
+    return NextResponse.json(
+      { error: `Cannot transition from '${hireRequest.status}' to '${status}'` },
+      { status: 422 }
+    )
+  }
 
   const { error: updateError } = await supabase
     .from('hire_requests')

@@ -51,8 +51,14 @@ export async function PATCH(req: NextRequest) {
   if ('services' in raw && Array.isArray(raw.services) && raw.services.every((s) => typeof s === 'string')) {
     update.services = raw.services as string[]
   }
-  if ('hourly_rate' in raw && (typeof raw.hourly_rate === 'number' || raw.hourly_rate === null)) {
-    update.hourly_rate = raw.hourly_rate
+  if ('hourly_rate' in raw) {
+    if (raw.hourly_rate === null) {
+      update.hourly_rate = null
+    } else if (typeof raw.hourly_rate === 'number' && raw.hourly_rate >= 0 && raw.hourly_rate <= 9999) {
+      update.hourly_rate = raw.hourly_rate
+    } else {
+      return NextResponse.json({ error: 'hourly_rate must be between 0 and 9999' }, { status: 400 })
+    }
   }
   if ('portfolio_url' in raw && (typeof raw.portfolio_url === 'string' || raw.portfolio_url === null)) {
     update.portfolio_url = raw.portfolio_url

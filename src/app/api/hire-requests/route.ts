@@ -46,6 +46,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     )
   }
 
+  // Prevent duplicate pending requests to same freelancer for same service
+  const { data: duplicate } = await supabase
+    .from('hire_requests')
+    .select('id')
+    .eq('client_id', user.id)
+    .eq('freelancer_id', freelancer_id)
+    .eq('service', service)
+    .eq('status', 'pending')
+    .maybeSingle()
+
+  if (duplicate) {
+    return NextResponse.json(
+      { error: 'You already have a pending request to this freelancer for this service.' },
+      { status: 409 }
+    )
+  }
+
   const insertPayload: Record<string, string> = {
     client_id: user.id,
     freelancer_id,
