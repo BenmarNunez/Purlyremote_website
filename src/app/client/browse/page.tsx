@@ -79,6 +79,12 @@ export default function BrowsePage() {
   const [wizardRan, setWizardRan] = useState(false)
   const [rankedIds, setRankedIds] = useState<Map<string, number>>(new Map())
 
+  // Smart Match (AI) state
+  const [smartQuery, setSmartQuery] = useState('')
+  const [smartLoading, setSmartLoading] = useState(false)
+  const [smartError, setSmartError] = useState<string | null>(null)
+  const [smartReasons, setSmartReasons] = useState<Map<string, string>>(new Map())
+
   // Load services on mount
   useEffect(() => {
     async function loadServices() {
@@ -144,6 +150,51 @@ export default function BrowsePage() {
     setWizardOpen(false)
   }
 
+  async function runSmartMatch() {
+    if (!smartQuery.trim()) return
+    setSmartLoading(true)
+    setSmartError(null)
+    try {
+      const res = await fetch('/api/match', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: smartQuery.trim() }),
+      })
+      const json = (await res.json()) as {
+        matches?: { user_id: string; score: number; reason: string }[]
+        error?: string
+      }
+      if (!res.ok) {
+        setSmartError(json.error ?? 'Smart Match failed.')
+        return
+      }
+      const matches = json.matches ?? []
+      if (matches.length === 0) {
+        setSmartError('No strong matches found. Try a different description.')
+        return
+      }
+      // Reorder freelancers: AI top results first, then rest
+      const order = new Map(matches.map((m, i) => [m.user_id, i]))
+      const reasonMap = new Map(matches.map((m) => [m.user_id, m.reason]))
+      const ranked = [...freelancers].sort((a, b) => {
+        const ai = order.has(a.user_id) ? (order.get(a.user_id) as number) : Infinity
+        const bi = order.has(b.user_id) ? (order.get(b.user_id) as number) : Infinity
+        return ai - bi
+      }).map((f) => {
+        const m = matches.find((x) => x.user_id === f.user_id)
+        return { ...f, matchScore: m?.score ?? 0 }
+      })
+      setFreelancers(ranked)
+      setSmartReasons(reasonMap)
+      setRankedIds(new Map(matches.map((m, i) => [m.user_id, i + 1])))
+      setWizardRan(true)
+    } catch {
+      setSmartError('Network error. Try again.')
+    } finally {
+      setSmartLoading(false)
+    }
+  }
+
   const maxScore = Math.max(...freelancers.map((f) => f.matchScore), 1)
 
   return (
@@ -186,6 +237,41 @@ export default function BrowsePage() {
         <button className="btn-primary" onClick={handleSearch}>
           Search
         </button>
+      </div>
+
+      {/* ── Smart Match (AI) ─────────────────────────────────────────────── */}
+      <div className="card mb-4 p-5 bg-gradient-to-br from-blue-50 to-white border border-blue-100">
+        <div className="flex items-center gap-2 mb-2">
+          <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-body font-semibold bg-[#007BFF] text-white">
+            ✨ AI
+          </span>
+          <h2 className="font-heading font-semibold text-neutral-800">Smart Match</h2>
+        </div>
+        <p className="text-sm font-body text-neutral-500 mb-3">
+          Describe what you need in plain English. Our AI will rank the best 3 freelancers.
+        </p>
+        <div className="flex gap-2 flex-wrap">
+          <input
+            type="text"
+            className="form-input flex-1 min-w-[240px]"
+            placeholder='e.g. "I need a senior React dev to ship a marketing landing page in 1 week"'
+            value={smartQuery}
+            onChange={(e) => setSmartQuery(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && !smartLoading && runSmartMatch()}
+            disabled={smartLoading}
+            maxLength={1000}
+          />
+          <button
+            className="btn-primary disabled:opacity-50"
+            onClick={runSmartMatch}
+            disabled={smartLoading || !smartQuery.trim()}
+          >
+            {smartLoading ? 'Matching…' : 'Smart Match'}
+          </button>
+        </div>
+        {smartError && (
+          <p className="text-sm font-body text-red-600 mt-2">{smartError}</p>
+        )}
       </div>
 
       {/* ── Find My Match wizard ────────────────────────────────────────────── */}
@@ -361,6 +447,16 @@ export default function BrowsePage() {
                         {skill}
                       </span>
                     ))}
+                  </div>
+                )}
+
+                {/* AI reason */}
+                {smartReasons.has(freelancer.user_id) && (
+                  <div className="flex items-start gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-100">
+                    <span className="text-xs font-body font-semibold text-[#007BFF] flex-shrink-0">✨ AI</span>
+                    <p className="text-xs font-body text-neutral-700 leading-relaxed">
+                      {smartReasons.get(freelancer.user_id)}
+                    </p>
                   </div>
                 )}
 
