@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef, useState, useCallback } from 'react'
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react'
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import type { Message, HireRequest, FreelancerProfile } from '@/lib/supabase/types'
 
@@ -18,7 +19,7 @@ export default function ClientChatPage({ params }: PageProps) {
   const [sending, setSending] = useState(false)
   const [loading, setLoading] = useState(true)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const supabase = createClient()
+  const supabase = useMemo(() => createClient(), [])
 
   // Resolve params
   useEffect(() => {
@@ -185,6 +186,9 @@ export default function ClientChatPage({ params }: PageProps) {
     <div className="flex flex-col h-[calc(100vh-4rem)]">
       {/* Header */}
       <div className="sticky top-0 z-10 bg-white border-b border-neutral-200 px-4 py-3 flex items-center gap-3">
+        <Link href="/client/messages" className="text-neutral-400 hover:text-neutral-600 transition-colors" aria-label="Back to messages">
+          <svg width="20" height="20" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg>
+        </Link>
         <div>
           <p className="font-heading font-semibold text-neutral-900 text-sm leading-tight">
             {freelancerName}

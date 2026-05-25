@@ -91,6 +91,21 @@ export default function HirePage() {
                     discuss your needs and begin the matching process.
                   </p>
                 </div>
+
+                <div className="p-5 bg-white rounded-xl border border-neutral-border mt-4">
+                  <p className="text-xs font-semibold text-brand-blue uppercase tracking-wide mb-2">
+                    💡 Faster hiring
+                  </p>
+                  <p className="text-sm text-neutral-muted leading-relaxed mb-3">
+                    Log in to your account to browse available freelancers directly and hire talent more easily — no waiting required.
+                  </p>
+                  <a
+                    href="/auth/login"
+                    className="btn-primary text-sm py-2 px-4 inline-block"
+                  >
+                    Log In to Browse Freelancers
+                  </a>
+                </div>
               </div>
 
               {/* Inquiry form */}

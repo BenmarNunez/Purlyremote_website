@@ -12,6 +12,7 @@ const navLinks = [
   { href: "/#how-it-works", label: "How It Works" },
   { href: "/#why-us", label: "Why Choose Us" },
   { href: "/#contact", label: "Contact" },
+  { href: "/pricing", label: "Pricing" },
 ];
 
 export default function Header() {
@@ -63,6 +64,9 @@ export default function Header() {
 
           {/* Desktop CTAs */}
           <div className="hidden lg:flex items-center gap-3">
+            <Link href="/auth/login" className="btn-ghost text-sm py-2 px-4">
+              Log In
+            </Link>
             <Link href="/apply" className="btn-outline text-sm py-2 px-5">
               Apply as Freelancer
             </Link>
@@ -97,6 +101,13 @@ export default function Header() {
               </Link>
             ))}
             <div className="flex flex-col gap-2 mt-3 pt-3 border-t border-neutral-border">
+              <Link
+                href="/auth/login"
+                className="btn-ghost text-sm py-2.5 w-full text-center"
+                onClick={() => setMobileOpen(false)}
+              >
+                Log In
+              </Link>
               <Link
                 href="/apply"
                 className="btn-outline text-sm py-2.5 w-full text-center"

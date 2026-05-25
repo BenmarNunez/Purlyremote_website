@@ -13,6 +13,11 @@ import {
   Search,
   Settings,
   Bot,
+  ClipboardList,
+  Shield,
+  BarChart2,
+  Mail,
+  CreditCard,
   Menu,
   X,
 } from 'lucide-react'
@@ -35,6 +40,7 @@ const NAV_LINKS: Record<SidebarProps['role'], NavLink[]> = {
     { label: 'My Requests', href: '/client/requests', icon: <FileText size={18} /> },
     { label: 'Messages', href: '/client/messages', icon: <MessageSquare size={18} /> },
     { label: 'Notifications', href: '/client/notifications', icon: <Bell size={18} /> },
+    { label: 'Billing', href: '/billing', icon: <CreditCard size={18} /> },
   ],
   freelancer: [
     { label: 'Dashboard', href: '/freelancer/dashboard', icon: <LayoutDashboard size={18} /> },
@@ -45,11 +51,18 @@ const NAV_LINKS: Record<SidebarProps['role'], NavLink[]> = {
   ],
   admin: [
     { label: 'Dashboard', href: '/admin/dashboard', icon: <LayoutDashboard size={18} /> },
-    { label: 'Freelancers', href: '/admin/freelancers', icon: <Users size={18} /> },
+    { label: 'Users', href: '/admin/users', icon: <Users size={18} /> },
+    { label: 'Applications', href: '/admin/applications', icon: <ClipboardList size={18} /> },
+    { label: 'Freelancers', href: '/admin/freelancers', icon: <User size={18} /> },
     { label: 'Clients', href: '/admin/clients', icon: <User size={18} /> },
     { label: 'Requests', href: '/admin/requests', icon: <FileText size={18} /> },
+    { label: 'Messages', href: '/admin/messages', icon: <MessageSquare size={18} /> },
+    { label: 'Reports', href: '/admin/reports', icon: <Shield size={18} /> },
     { label: 'Services', href: '/admin/services', icon: <Settings size={18} /> },
     { label: 'Chatbot Logs', href: '/admin/chatbot', icon: <Bot size={18} /> },
+    { label: 'Analytics', href: '/admin/analytics', icon: <BarChart2 size={18} /> },
+    { label: 'Email Logs', href: '/admin/emails', icon: <Mail size={18} /> },
+    { label: 'Audit Logs', href: '/admin/logs', icon: <Shield size={18} /> },
   ],
 }
 

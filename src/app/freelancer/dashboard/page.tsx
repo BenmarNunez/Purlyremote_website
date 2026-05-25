@@ -4,6 +4,7 @@ import Link from 'next/link'
 import type { Metadata } from 'next'
 import type { FreelancerProfile, HireRequest } from '@/lib/supabase/types'
 import PendingRequestActions from './PendingRequestActions'
+import OnboardingChecklist from '@/components/dashboard/OnboardingChecklist'
 
 export const metadata: Metadata = { title: 'Freelancer Dashboard — PurlyRemote' }
 
@@ -141,6 +142,18 @@ export default async function FreelancerDashboard() {
 
       {/* Approval banner */}
       <ApprovalBanner status={approvalStatus} notes={profile?.approval_notes ?? null} />
+
+      {/* Onboarding checklist — shown until approved */}
+      {approvalStatus !== 'approved' && (
+        <OnboardingChecklist
+          profileCompleted={profile?.profile_completed ?? false}
+          approvalStatus={approvalStatus}
+          hasBio={!!(profile?.bio && profile.bio.trim().length > 0)}
+          hasSkills={(profile?.skills?.length ?? 0) >= 1}
+          hasServices={(profile?.services?.length ?? 0) >= 1}
+          hasRate={profile?.hourly_rate !== null && profile?.hourly_rate !== undefined}
+        />
+      )}
 
       {/* Stats (approved only) */}
       {isApproved && stats && (

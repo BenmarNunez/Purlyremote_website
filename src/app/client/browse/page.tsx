@@ -102,7 +102,8 @@ export default function BrowsePage() {
       if (search) params.set('search', search)
       const res = await fetch(`/api/freelancers?${params.toString()}`)
       if (!res.ok) return
-      const data = (await res.json()) as FreelancerProfile[]
+      const json = (await res.json()) as { data: FreelancerProfile[] } | FreelancerProfile[]
+      const data = Array.isArray(json) ? json : json.data
       setFreelancers(data.map((f) => ({ ...f, matchScore: 0 })))
       setWizardRan(false)
     } finally {

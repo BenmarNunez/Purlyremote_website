@@ -1,8 +1,11 @@
+import type { Metadata } from 'next'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Sidebar from '@/components/dashboard/Sidebar'
 import NotificationBell from '@/components/dashboard/NotificationBell'
 import type { FreelancerProfile } from '@/lib/supabase/types'
+
+export const metadata: Metadata = { robots: { index: false, follow: false } }
 import AvailabilityToggle from './AvailabilityToggle'
 
 export default async function FreelancerLayout({
