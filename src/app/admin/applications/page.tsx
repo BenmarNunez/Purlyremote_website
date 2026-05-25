@@ -6,10 +6,12 @@ interface ApplicationRow {
   id: string
   full_name: string
   email: string
+  phone_number: string | null
   expertise_area: string
   years_experience: string
   preferred_role: string | null
   portfolio_url: string | null
+  resume_url: string | null
   availability_status: string
   additional_notes: string | null
   status: 'pending' | 'approved' | 'rejected'
@@ -97,6 +99,14 @@ function DetailModal({ app, onClose, onApprove, onReject, loading }: DetailModal
             </div>
           </div>
 
+          {/* Phone */}
+          {app.phone_number && (
+            <div className="p-4 bg-neutral-50 rounded-xl">
+              <p className="text-xs font-body font-medium text-neutral-400 uppercase tracking-wide mb-1">Phone</p>
+              <p className="font-body text-neutral-700 text-sm">{app.phone_number}</p>
+            </div>
+          )}
+
           {/* Portfolio */}
           <div className="p-4 bg-neutral-50 rounded-xl">
             <p className="text-xs font-body font-medium text-neutral-400 uppercase tracking-wide mb-1">Portfolio / LinkedIn / GitHub</p>
@@ -104,6 +114,23 @@ function DetailModal({ app, onClose, onApprove, onReject, loading }: DetailModal
               <a href={app.portfolio_url} target="_blank" rel="noopener noreferrer"
                 className="font-body text-[#007BFF] hover:underline break-all text-sm">
                 {app.portfolio_url}
+              </a>
+            ) : (
+              <p className="font-body text-neutral-500 text-sm">Not provided</p>
+            )}
+          </div>
+
+          {/* Resume */}
+          <div className="p-4 bg-neutral-50 rounded-xl">
+            <p className="text-xs font-body font-medium text-neutral-400 uppercase tracking-wide mb-1">Resume / CV</p>
+            {app.resume_url ? (
+              <a
+                href={`/api/admin/applications/${app.id}/resume`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-[#007BFF] text-white text-sm font-body font-medium hover:bg-blue-700 transition-colors"
+              >
+                📄 Download Resume
               </a>
             ) : (
               <p className="font-body text-neutral-500 text-sm">Not provided</p>

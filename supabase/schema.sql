@@ -296,10 +296,12 @@ create table if not exists public.freelancer_applications (
   id                  uuid primary key default gen_random_uuid(),
   full_name           text not null,
   email               text not null,
+  phone_number        text,
   expertise_area      text not null,
   years_experience    text not null,
   preferred_role      text,
   portfolio_url       text,
+  resume_url          text,
   availability_status text not null default 'Flexible',
   additional_notes    text,
   status              text not null default 'pending'
@@ -307,6 +309,10 @@ create table if not exists public.freelancer_applications (
   admin_notes         text,
   created_at          timestamptz not null default now()
 );
+
+alter table public.freelancer_applications
+  add column if not exists phone_number text,
+  add column if not exists resume_url   text;
 
 alter table public.freelancer_applications enable row level security;
 -- No user-facing policies — all operations use service role key (adminClient)
@@ -333,6 +339,41 @@ create policy "avatars: freelancer delete own"
   on storage.objects for delete
   using (
     bucket_id = 'avatars'
+    and auth.uid()::text = (storage.foldername(name))[2]
+  );
+
+-- ============================================================
+-- SUPABASE STORAGE — resumes bucket
+-- Private. Service-role write (apply route), service-role read (admin
+-- creates a short-lived signed URL via /api/admin/applications/[id]/resume).
+-- ============================================================
+insert into storage.buckets (id, name, public)
+  values ('resumes', 'resumes', false)
+  on conflict (id) do nothing;
+
+-- Public /apply form uploads to resumes/applications/<file>.
+-- Anon may insert here; no select/update/delete — admin reads via signed URL.
+create policy "resumes: applications insert"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'resumes'
+    and (storage.foldername(name))[1] = 'applications'
+  );
+
+-- Authenticated freelancers upload to resumes/freelancers/<auth.uid>/.
+create policy "resumes: freelancer upload own"
+  on storage.objects for insert
+  with check (
+    bucket_id = 'resumes'
+    and (storage.foldername(name))[1] = 'freelancers'
+    and auth.uid()::text = (storage.foldername(name))[2]
+  );
+
+create policy "resumes: freelancer read own"
+  on storage.objects for select
+  using (
+    bucket_id = 'resumes'
+    and (storage.foldername(name))[1] = 'freelancers'
     and auth.uid()::text = (storage.foldername(name))[2]
   );
 
