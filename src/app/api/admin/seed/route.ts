@@ -1,8 +1,14 @@
-// WARNING: Disable or delete this route after creating your admin account.
+// WARNING: Delete this file after creating your admin account.
 import { adminClient } from '@/lib/supabase/admin'
 import { NextRequest, NextResponse } from 'next/server'
 
 export async function POST(req: NextRequest) {
+  // Hard-disabled in production unless ALLOW_ADMIN_SEED=true is explicitly set.
+  // After seeding, remove ALLOW_ADMIN_SEED from your environment and delete this file.
+  if (process.env.NODE_ENV === 'production' && process.env.ALLOW_ADMIN_SEED !== 'true') {
+    return NextResponse.json({ error: 'Not found' }, { status: 404 })
+  }
+
   let body: unknown
   try {
     body = await req.json()

@@ -254,7 +254,8 @@ export default function FreelancerTable({ freelancers }: FreelancerTableProps) {
       ? freelancers
       : freelancers.filter((f) => f.approval_status === activeTab)
 
-  async function handleApprove(userId: string) {
+  async function handleApprove(userId: string, name: string) {
+    if (!window.confirm(`Approve ${name}? This will create their account and send them a setup email.`)) return
     setActionLoading(userId + '-approve')
     try {
       const res = await fetch(`/api/admin/freelancers/${userId}`, {
@@ -383,7 +384,7 @@ export default function FreelancerTable({ freelancers }: FreelancerTableProps) {
                           {/* Approve */}
                           {f.approval_status !== 'approved' && (
                             <button
-                              onClick={() => handleApprove(f.user_id)}
+                              onClick={() => handleApprove(f.user_id, f.full_name)}
                               disabled={actionLoading === f.user_id + '-approve'}
                               className="inline-flex items-center px-2.5 py-1 rounded-md bg-green-50 text-green-700 text-xs font-body font-medium border border-green-200 hover:bg-green-100 transition-colors disabled:opacity-50"
                             >
