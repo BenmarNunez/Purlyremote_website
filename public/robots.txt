@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /client/
+Disallow: /freelancer/
+Disallow: /auth/
+Disallow: /api/
+
+Sitemap: https://purlyremote.com/sitemap.xml
