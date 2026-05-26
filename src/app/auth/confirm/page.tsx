@@ -47,7 +47,12 @@ function ConfirmInner() {
           setStatus('error')
           return
         }
-        router.replace(next)
+        // Recovery type = new freelancer must set password first
+        const tokenType = hashParams.get('type')
+        const destination = tokenType === 'recovery'
+          ? '/auth/reset-password'
+          : next
+        router.replace(destination)
         return
       }
 
