@@ -3,7 +3,7 @@ import { adminClient } from '@/lib/supabase/admin'
 import { NextRequest, NextResponse } from 'next/server'
 import { Resend } from 'resend'
 import { logAdminAction } from '@/lib/audit'
-import { logEmail } from '@/lib/email-logger'
+import { sendAndLog } from '@/lib/email-logger'
 
 const resend = new Resend(process.env.RESEND_API_KEY)
 const FROM = process.env.CONTACT_FROM_EMAIL ?? 'noreply@purlyremote.com'
@@ -119,34 +119,32 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     })
     const setupLink = linkData?.properties?.action_link ?? `${SITE_URL}/auth/login`
 
-    resend.emails.send({
-      from: FROM,
-      to: app.email,
-      subject: '🎉 Your Purly Remote application was approved!',
-      html: `
-        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px">
-          <h2 style="color:#007BFF">Congratulations, ${escapeHtml(app.full_name)}!</h2>
-          <p>Your application to <strong>Purly Remote</strong> has been approved. Welcome to the team!</p>
-          <p>To get started:</p>
-          <ol style="line-height:2">
-            <li>Click the button below to set your password</li>
-            <li>Complete your freelancer profile</li>
-            <li>Submit your profile for final approval to become visible to clients</li>
-          </ol>
-          <a href="${setupLink}"
-             style="display:inline-block;background:#007BFF;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:16px;margin-bottom:24px">
-            Set My Password & Get Started
-          </a>
-          <p style="color:#888;font-size:13px">This link expires in 24 hours. If it expires, use the login page to request a new one.</p>
-          <p style="margin-top:24px;color:#888;font-size:13px">— The Purly Remote Team</p>
-        </div>
-      `,
-    })
-    .then(() => logEmail({ toEmail: app.email, subject: '🎉 Your Purly Remote application was approved!', type: 'application_approved', status: 'sent' }))
-    .catch((err: unknown) => {
-      console.error('Approval email failed:', err)
-      logEmail({ toEmail: app.email, subject: '🎉 Your Purly Remote application was approved!', type: 'application_approved', status: 'failed', errorMessage: String(err) })
-    })
+    await sendAndLog(
+      () => resend.emails.send({
+        from: FROM,
+        to: app.email,
+        subject: '🎉 Your Purly Remote application was approved!',
+        html: `
+          <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px">
+            <h2 style="color:#007BFF">Congratulations, ${escapeHtml(app.full_name)}!</h2>
+            <p>Your application to <strong>Purly Remote</strong> has been approved. Welcome to the team!</p>
+            <p>To get started:</p>
+            <ol style="line-height:2">
+              <li>Click the button below to set your password</li>
+              <li>Complete your freelancer profile</li>
+              <li>Submit your profile for final approval to become visible to clients</li>
+            </ol>
+            <a href="${setupLink}"
+               style="display:inline-block;background:#007BFF;color:#fff;padding:14px 28px;border-radius:8px;text-decoration:none;font-weight:600;margin-top:16px;margin-bottom:24px">
+              Set My Password & Get Started
+            </a>
+            <p style="color:#888;font-size:13px">This link expires in 24 hours. If it expires, use the login page to request a new one.</p>
+            <p style="margin-top:24px;color:#888;font-size:13px">— The Purly Remote Team</p>
+          </div>
+        `,
+      }),
+      { toEmail: app.email, subject: '🎉 Your Purly Remote application was approved!', type: 'application_approved' }
+    )
 
     await adminClient
       .from('freelancer_applications')
@@ -161,20 +159,23 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
       .update({ status: 'rejected', admin_notes: notes ?? null })
       .eq('id', id)
 
-    resend.emails.send({
-      from: FROM,
-      to: app.email,
-      subject: 'Update on your Purly Remote application',
-      html: `
-        <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px">
-          <h2 style="color:#111">Thank you for applying, ${escapeHtml(app.full_name)}</h2>
-          <p>We appreciate your interest in joining <strong>Purly Remote</strong>. After reviewing your application, we are unable to move forward at this time.</p>
-          ${notes ? `<p><strong>Feedback:</strong> ${escapeHtml(notes)}</p>` : ''}
-          <p>We encourage you to reapply in the future as our needs evolve.</p>
-          <p style="margin-top:32px;color:#888;font-size:13px">— The Purly Remote Team</p>
-        </div>
-      `,
-    }).catch((err: unknown) => console.error('Rejection email failed:', err))
+    await sendAndLog(
+      () => resend.emails.send({
+        from: FROM,
+        to: app.email,
+        subject: 'Update on your Purly Remote application',
+        html: `
+          <div style="font-family:sans-serif;max-width:560px;margin:0 auto;padding:32px">
+            <h2 style="color:#111">Thank you for applying, ${escapeHtml(app.full_name)}</h2>
+            <p>We appreciate your interest in joining <strong>Purly Remote</strong>. After reviewing your application, we are unable to move forward at this time.</p>
+            ${notes ? `<p><strong>Feedback:</strong> ${escapeHtml(notes)}</p>` : ''}
+            <p>We encourage you to reapply in the future as our needs evolve.</p>
+            <p style="margin-top:32px;color:#888;font-size:13px">— The Purly Remote Team</p>
+          </div>
+        `,
+      }),
+      { toEmail: app.email, subject: 'Update on your Purly Remote application', type: 'application_rejected' }
+    )
   }
 
   return NextResponse.json({ success: true })

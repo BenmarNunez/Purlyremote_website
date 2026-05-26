@@ -24,12 +24,25 @@ export async function logEmail(params: LogEmailParams): Promise<void> {
   }
 }
 
+// Resend SDK returns { data, error } and DOES NOT throw on API failures.
+// Treat a populated `error` field as a real failure so email_logs status is accurate.
+interface ResendLikeResult {
+  data?: unknown
+  error?: { message?: string; name?: string; statusCode?: number } | null
+}
+
 export async function sendAndLog(
-  sendFn: () => Promise<unknown>,
+  sendFn: () => Promise<ResendLikeResult | unknown>,
   params: Omit<LogEmailParams, 'status' | 'errorMessage'>
 ): Promise<void> {
   try {
-    await sendFn()
+    const result = (await sendFn()) as ResendLikeResult
+    if (result && typeof result === 'object' && 'error' in result && result.error) {
+      const msg = result.error.message ?? result.error.name ?? 'Resend rejected the send.'
+      await logEmail({ ...params, status: 'failed', errorMessage: msg })
+      console.error(`Email rejected by Resend [${params.type}] to ${params.toEmail}: ${msg}`)
+      return
+    }
     await logEmail({ ...params, status: 'sent' })
   } catch (err) {
     await logEmail({
