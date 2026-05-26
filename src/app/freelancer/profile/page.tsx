@@ -331,6 +331,75 @@ function PortfolioGallery({
   )
 }
 
+// ─── Change password ──────────────────────────────────────────────────────────
+
+function ChangePassword() {
+  const [newPass, setNewPass] = useState('')
+  const [confirmPass, setConfirmPass] = useState('')
+  const [status, setStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle')
+  const [error, setError] = useState<string | null>(null)
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault()
+    setError(null)
+    if (newPass.length < 8) { setError('Password must be at least 8 characters.'); return }
+    if (newPass !== confirmPass) { setError('Passwords do not match.'); return }
+    setStatus('saving')
+    const supabase = createClient()
+    const { error: updateErr } = await supabase.auth.updateUser({ password: newPass })
+    if (updateErr) { setError(updateErr.message); setStatus('error'); return }
+    setStatus('saved')
+    setNewPass('')
+    setConfirmPass('')
+    setTimeout(() => setStatus('idle'), 3000)
+  }
+
+  return (
+    <div className="rounded-lg border border-neutral-200 bg-white p-5 space-y-3">
+      <h2 className="font-heading font-semibold text-neutral-900">Set / Change Password</h2>
+      <p className="text-sm font-body text-neutral-500">
+        New account? Set your password here. Existing users can update it anytime.
+      </p>
+      <form onSubmit={handleSave} className="space-y-3">
+        <div>
+          <label className="form-label" htmlFor="new_pass">New Password</label>
+          <input
+            id="new_pass"
+            type="password"
+            className="form-input"
+            minLength={8}
+            placeholder="At least 8 characters"
+            value={newPass}
+            onChange={e => setNewPass(e.target.value)}
+            disabled={status === 'saving'}
+            autoComplete="new-password"
+          />
+        </div>
+        <div>
+          <label className="form-label" htmlFor="confirm_pass">Confirm Password</label>
+          <input
+            id="confirm_pass"
+            type="password"
+            className="form-input"
+            minLength={8}
+            value={confirmPass}
+            onChange={e => setConfirmPass(e.target.value)}
+            disabled={status === 'saving'}
+            autoComplete="new-password"
+          />
+        </div>
+        {error && <p className="text-sm font-body text-red-600">{error}</p>}
+        <div className="flex items-center gap-4">
+          <button type="submit" disabled={status === 'saving'} className="btn-primary disabled:opacity-60">
+            {status === 'saving' ? 'Saving…' : 'Save Password'}
+          </button>
+          {status === 'saved' && <span className="text-sm font-body text-green-600">✓ Password updated</span>}
+        </div>
+      </form>
+    </div>
+  )
+}
+
 // ─── Main page ────────────────────────────────────────────────────────────────
 
 export default function FreelancerProfilePage() {
@@ -627,6 +696,9 @@ export default function FreelancerProfilePage() {
           )}
         </div>
       </form>
+
+      {/* Change password */}
+      <ChangePassword />
 
       {/* Submit for review */}
       <div className="rounded-lg border border-neutral-200 bg-white p-5 space-y-3">
