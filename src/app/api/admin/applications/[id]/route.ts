@@ -116,6 +116,9 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const { data: linkData } = await adminClient.auth.admin.generateLink({
       type: 'recovery',
       email: app.email,
+      options: {
+        redirectTo: `${SITE_URL}/auth/confirm?next=/auth/reset-password`,
+      },
     })
     const setupLink = linkData?.properties?.action_link ?? `${SITE_URL}/auth/login`
 
